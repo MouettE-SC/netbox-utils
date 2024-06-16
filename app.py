@@ -1,6 +1,5 @@
 import random
 import string
-import psycopg2
 import pynetbox
 from psycopg2.pool import ThreadedConnectionPool
 from flask import Flask, render_template, request, session, redirect, url_for, send_file
@@ -110,7 +109,7 @@ def login():
             r = c.fetchone()
             if not r:
                 return render_template('login.html', error="No available token for this user")
-            s_data['nb'] = pynetbox.api('http://netbox', token=r[0])
+            s_data['nb'] = pynetbox.api('http://localhost', token=r[0])
             return redirect(url_for('index'))
     finally:
         if db:
