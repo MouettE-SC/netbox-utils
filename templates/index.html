@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Netbox utils</title>
+  <link href="static/bootstrap.min.css" rel="stylesheet">
+  <link href="static/netbox-utils.css" rel="stylesheet">
+</head>
+<body>
+<div class="content container-fluid">
+  <div class="row">
+    <div class="col">
+      <div class="sub-content">
+        <h3 class="fw-normal">Backup</h3>
+        <p class="text-start mt-3"><a class="w-25 btn btn-lg btn-primary" href="backup">Backup</a></p>
+        <hr>
+        <h3 class="fw-normal">Restore</h3>
+        <form method="post" action="restore" enctype="multipart/form-data">
+          <div class="input-group input-group-lg mt-3">
+            <input class="form-control" type="file" id="restore" name="restore">
+            <button class="btn btn-primary" type="submit">Restore</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div class="col">
+      <div class="sub-content">
+        <h3 class="fw-normal mb-3">Move rack devices</h3>
+        {% if mr_errors %}
+        <div class="alert alert-danger alert-dismissible fade show">
+          {{ mr_errors|join('<br>'|safe) }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endif %}
+        {% if mr_messages %}
+        <div class="alert alert-success alert-dismissible fade show">
+          {{ mr_messages|join('<br>'|safe) }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endif %}
+        <form method="post" action="move-rack">
+          <div class="mb-3 row">
+            <label for="mr-rack" class="col-sm-2 col-form-label">Rack</label>
+            <div class="col-sm-10">
+              <select class="form-select" id="mr-rack" name="rack">
+              {% for id, name in racks | dictsort(by='value') %}
+                <option value="{{ id }}">{{ name }}</option>
+              {%  endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="mb-3 row">
+            <label for="mr-start" class="col-sm-2 col-form-label">Start</label>
+            <div class="col-sm-10">
+              <input type="number" class="form-control" id="mr-start" name="start" required value="1" min="1">
+            </div>
+          </div>
+          <div class="mb-3 row">
+            <label for="mr-end" class="col-sm-2 col-form-label">End</label>
+            <div class="col-sm-10">
+              <input type="number" class="form-control" id="mr-end" name="end" required value="1" min="1">
+            </div>
+          </div>
+          <div class="mb-3 row">
+            <label for="mr-offset" class="col-sm-2 col-form-label">Offset</label>
+            <div class="col-sm-10">
+              <input type="number" class="form-control" id="mr-offset" name="offset" required value="0">
+            </div>
+          </div>
+          <button class="btn btn-lg btn-primary" type="submit">Move</button>
+        </form>
+      </div>
+    <hr>
+    </div>
+  </div>
+</div>
+<script src="static/bootstrap.bundle.min.js"></script>
+</body>
+</html>
