@@ -85,6 +85,7 @@ def index():
     try:
         rl = rack_list(s_data['nb'])
     except:
+        app.logger.exception("NetBox connection error")
         return "<p>Unable to connect to netbox instance</p>"
     return render_template('index.html', racks=rl)
 
