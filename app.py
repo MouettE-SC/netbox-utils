@@ -143,15 +143,16 @@ def restore():
             z.extract('netbox.sql', '/tmp')
             z.extract('netbox.tar', '/tmp')
     except:
+        app.logger.exception("Error reading restore file")
         return f"<p>Error reading restore file</p>"
 
     db_conn.closeall()
 
-    rc = run(['sudo', 'systemctl', 'stop', 'netbox'])
+    rc = run(['sudo', '/usr/bin/systemctl', 'stop', 'netbox'])
     if rc.returncode != 0:
         return f"<p>Unable to stop netbox service :</p><pre>{rc.stderr.decode('utf8')}</pre>"
 
-    rc = run(['sudo', 'systemctl', 'stop', 'netbox-rq'])
+    rc = run(['sudo', '/usr/bin/systemctl', 'stop', 'netbox-rq'])
     if rc.returncode != 0:
         return f"<p>Unable to stop netbox-rq service :</p><pre>{rc.stderr.decode('utf8')}</pre>"
 
@@ -174,13 +175,14 @@ def restore():
         with tarfile.open('/tmp/netbox.tar', 'r') as t:
             t.extractall('/opt/netbox/netbox/media')
     except:
+        app.logger.exception("Unable to restore media files")
         return f"<p>Unable to restore media files</p>"
     s_data['nb'] = None
-    rc = run(['sudo', 'systemctl', 'start', 'netbox'])
+    rc = run(['sudo', '/usr/bin/systemctl', 'start', 'netbox'])
     if rc.returncode != 0:
         return f"<p>Unable to start netbox service :</p><pre>{rc.stderr.decode('utf8')}</pre>"
 
-    rc = run(['sudo', 'systemctl', 'start', 'netbox-rq'])
+    rc = run(['sudo', '/usr/bin/systemctl', 'start', 'netbox-rq'])
     if rc.returncode != 0:
         return f"<p>Unable to start netbox-rq service :</p><pre>{rc.stderr.decode('utf8')}</pre>"
 
