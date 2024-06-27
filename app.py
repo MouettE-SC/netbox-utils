@@ -9,11 +9,15 @@ import tarfile
 from hashers import verify_password
 from subprocess import run
 from rack import move_devices
+import re
+from packaging.version import Version, InvalidVersion
 
 app = Flask(__name__)
 app.secret_key = 'd264440cfa13dd54d77264bb535e346c25a695309c3c37f7c5c6f2c6f31f3900'
 netbox_config = '/opt/netbox/netbox/netbox/configuration.py'
-netbox_installed = False
+netbox_settings = '/opt/netbox/netbox/netbox/settings.py'
+netbox_version: Version
+netbox_version = None
 db_conn: ThreadedConnectionPool
 db_conn = None
 netbox_init = False
@@ -21,11 +25,17 @@ sessions = dict()
 
 @app.before_request
 def setup():
-    global netbox_installed, db_conn, netbox_init, app
+    global netbox_version, db_conn, netbox_init, app
     app.before_request_funcs[None].remove(setup)
-    if not os.path.exists(netbox_config):
+    if not os.path.exists(netbox_config) or not os.path.exists(netbox_settings):
         return
-    netbox_installed = True
+    with open(netbox_settings, 'r') as f:
+        for line in f:
+            if m := re.match("VERSION\\s*=\\s*[\"'](\\d+\\.\\d+\\.\\d+)[\"']", line.strip()):
+                netbox_version = Version(m.group(1))
+                break
+    if netbox_version is None:
+        return
     exec(open(netbox_config).read(), globals())
 
     db_conn = ThreadedConnectionPool(2, 10, database=DATABASE['NAME'], user=DATABASE['USER'], password=DATABASE['PASSWORD'])
@@ -49,8 +59,8 @@ def not_found(e):
     return "<p>Not found</p>"
 
 def check_app(need_db):
-    global netbox_installed, db_conn, sessions
-    if not netbox_installed:
+    global netbox_version, db_conn, sessions
+    if netbox_version is None:
         return False, None, "Netbox install not detected"
     if need_db:
         try:
@@ -132,7 +142,7 @@ def move_rack():
 
 @app.route('/restore', methods=['POST'])
 def restore():
-    global db_conn
+    global db_conn, netbox_version
     valid, _, s_data = check_app(False)
     if not valid:
         return f"<p>{s_data}</p>"
@@ -143,9 +153,23 @@ def restore():
         with zipfile.ZipFile('/tmp/netbox.zip', 'r') as z:
             z.extract('netbox.sql', '/tmp')
             z.extract('netbox.tar', '/tmp')
+            z.extract('netbox.version', '/tmp')
     except:
         app.logger.exception("Error reading restore file")
         return f"<p>Error reading restore file</p>"
+
+    n_version: Version
+    n_version = None
+    with open('/tmp/netbox.version', 'r') as f:
+        try:
+            n_version = Version(f.read())
+        except InvalidVersion:
+            pass
+    if not n_version:
+        return "<p>No Netbox version in restore file</p>"
+
+    if n_version > netbox_version:
+        return f"<p>Local netbox version ({str(netbox_version)}) is older that restore version ({str(n_version)}) ; cannot continue</p>"
 
     db_conn.closeall()
 
@@ -164,6 +188,11 @@ def restore():
     rc = run(['/usr/bin/psql', '-c', 'drop database netbox', '-c', 'create database netbox', '-c', '\\c netbox', '-f', '/tmp/netbox.sql'], capture_output=True, env=pg_env)
     if rc.returncode != 0:
         return f"<p>DB restore error :</p><pre>{rc.stderr.decode('utf8')}</pre>"
+
+    if netbox_version > n_version:
+        rc = run(['/opt/nebox/venv/bin/python3', 'netbox/manage.py', 'migrate'], capture_output=True, cwd='/opt/netbox')
+        if rc.returncode != 0:
+            return f"<p>DB migration error :</p><pre>{rc.stderr.decode('utf8')}</pre></p>"
 
     try:
         for r in '/opt/netbox/netbox/media/devicetype-images', '/opt/netbox/netbox/media/image-attachments':
@@ -191,11 +220,14 @@ def restore():
 
 @app.route('/backup', methods=['GET'])
 def backup():
+    global netbox_version
     valid, _, s_data = check_app(False)
     if not valid:
         return f"<p>{s_data}</p>"
     if not s_data['nb']:
         return render_template('login.html')
+    with open('/tmp/netbox.version', 'w') as o:
+        o.write(str(netbox_version))
     pg_env = dict(os.environ)
     pg_env['PGDATABSE'] = DATABASE['NAME']
     pg_env['PGUSER'] = DATABASE['USER']
@@ -211,6 +243,7 @@ def backup():
     with zipfile.ZipFile(file='/tmp/netbox.zip', mode='w', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as z:
         z.write('/tmp/netbox.tar', arcname='netbox.tar')
         z.write('/tmp/netbox.sql', arcname='netbox.sql')
+        z.write('/tmp/netbox.version', arcname='netbox.version')
     return send_file('/tmp/netbox.zip', as_attachment=True, download_name='netbox.zip')
 
 if __name__ == '__main__':

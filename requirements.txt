@@ -2,3 +2,4 @@ Flask
 pynetbox
 psycopg2
 expiring-dict
+packaging
