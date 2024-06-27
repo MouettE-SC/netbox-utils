@@ -142,7 +142,7 @@ def move_rack():
 
 @app.route('/restore', methods=['POST'])
 def restore():
-    global db_conn, netbox_version
+    global db_conn, netbox_version, netbox_init
     valid, _, s_data = check_app(False)
     if not valid:
         return f"<p>{s_data}</p>"
@@ -217,6 +217,7 @@ def restore():
         return f"<p>Unable to start netbox-rq service :</p><pre>{rc.stderr.decode('utf8')}</pre>"
 
     db_conn = ThreadedConnectionPool(2, 10, database=DATABASE['NAME'], user=DATABASE['USER'], password=DATABASE['PASSWORD'])
+    netbox_init = True
 
     return render_template('login.html')
 
