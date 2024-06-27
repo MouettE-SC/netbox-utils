@@ -182,7 +182,7 @@ def restore():
         return f"<p>Unable to stop netbox-rq service :</p><pre>{rc.stderr.decode('utf8')}</pre>"
 
     pg_env = dict(os.environ)
-    pg_env['PGDATABSE'] = 'postgres'
+    pg_env['PGDATABASE'] = 'postgres'
     pg_env['PGUSER'] = DATABASE['USER']
     pg_env['PGPASSWORD'] = DATABASE['PASSWORD']
     rc = run(['/usr/bin/psql', '-c', 'drop database netbox', '-c', 'create database netbox', '-c', '\\c netbox', '-f', '/tmp/netbox.sql'], capture_output=True, env=pg_env)
