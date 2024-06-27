@@ -216,6 +216,8 @@ def restore():
     if rc.returncode != 0:
         return f"<p>Unable to start netbox-rq service :</p><pre>{rc.stderr.decode('utf8')}</pre>"
 
+    db_conn = ThreadedConnectionPool(2, 10, database=DATABASE['NAME'], user=DATABASE['USER'], password=DATABASE['PASSWORD'])
+
     return render_template('login.html')
 
 @app.route('/backup', methods=['GET'])
