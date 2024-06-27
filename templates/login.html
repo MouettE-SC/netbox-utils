@@ -9,7 +9,7 @@
 </head>
 <body class="text-center">
 <main class="form-signin">
-  <form method="post" action="login" onsubmit="document.querySelector('#submit').setAttribute('disabled', 'disabled')">
+  <form method="post" action="login" onsubmit="st_submit()">
     <h1 class="h3 mb-3 fw-normal">Netbox utils</h1>
     {% if error %}
     <div class="alert alert-danger">{{ error }}</div>
@@ -25,5 +25,14 @@
     <button id="submit" class="w-100 btn btn-lg btn-primary" type="submit">Login</button>
   </form>
 </main>
+<script>
+  function st_submit() {
+      let s = document.querySelector('#submit');
+      s.setAttribute('disabled', 'disabled');
+      let sp = document.createElement("span");
+      sp.classList.add("spinner-border");
+      s.prepend(sp);
+  }
+</script>
 </body>
 </html>
