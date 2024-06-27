@@ -85,6 +85,7 @@ def rack_list(nb):
 
 @app.route('/')
 def index():
+    global netbox_init
     valid, _, s_data = check_app(False)
     if not valid:
         return f"<p>{s_data}</p>"
