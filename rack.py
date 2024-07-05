@@ -29,12 +29,11 @@ def move_devices(nb, id_rack, pos1, pos2, offset):
         for i in range(start, end, step):
             if rt[i] is None:
                 continue
+           rt[i].position += 1.0 * offset
             if offset > 0:
-                rt[i].position += 1.0
                 rt[i].save()
                 m.append("Moved {} up {} rows".format(rt[i].name, offset))
             else:
-                rt[i].position -= 1.0
                 rt[i].save()
                 m.append("Moved {} down {} rows".format(rt[i].name, -offset))
         return True, m
