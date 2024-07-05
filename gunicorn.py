@@ -3,10 +3,10 @@ bind = '127.0.0.1:8002'
 
 # Number of gunicorn workers to spawn. This should typically be 2n+1, where
 # n is the number of CPU cores present.
-workers = 5
+workers = 1
 
 # Number of threads per worker process
-threads = 3
+threads = 1
 
 # Timeout (in seconds) for a request to complete
 timeout = 120
