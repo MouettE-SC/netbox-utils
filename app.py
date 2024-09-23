@@ -1,6 +1,7 @@
 import random
 import string
 import pynetbox
+import yaml
 from psycopg2.pool import ThreadedConnectionPool
 from flask import Flask, render_template, request, session, redirect, url_for, send_file
 import os.path, shutil
@@ -15,7 +16,7 @@ from packaging.version import Version, InvalidVersion
 app = Flask(__name__)
 app.secret_key = 'd264440cfa13dd54d77264bb535e346c25a695309c3c37f7c5c6f2c6f31f3900'
 netbox_config = '/opt/netbox/netbox/netbox/configuration.py'
-netbox_settings = '/opt/netbox/netbox/netbox/settings.py'
+netbox_release = '/opt/netbox/netbox/release.yaml'
 netbox_version: Version
 netbox_version = None
 db_conn: ThreadedConnectionPool
@@ -27,15 +28,19 @@ sessions = dict()
 def setup():
     global netbox_version, db_conn, netbox_init, app
     app.before_request_funcs[None].remove(setup)
-    if not os.path.exists(netbox_config) or not os.path.exists(netbox_settings):
+    if not os.path.exists(netbox_config) or not os.path.exists(netbox_release):
         return
-    with open(netbox_settings, 'r') as f:
-        for line in f:
-            if m := re.match("VERSION\\s*=\\s*[\"'](\\d+\\.\\d+\\.\\d+)[\"']", line.strip()):
-                netbox_version = Version(m.group(1))
-                break
-    if netbox_version is None:
+
+    release_data = dict()
+    with open(netbox_release, 'r') as f:
+        try:
+            release_data = yaml.safe_load(f)
+        except:
+            app.logger.exception('Unable to read/parse release file')
+    if 'version' not in release_data:
         return
+    netbox_version = Version(release_data['version'])
+
     exec(open(netbox_config).read(), globals())
 
     db_conn = ThreadedConnectionPool(2, 10, database=DATABASE['NAME'], user=DATABASE['USER'], password=DATABASE['PASSWORD'])
@@ -45,8 +50,9 @@ def setup():
             db.autocommit = True
             with db.cursor() as cursor:
                 cursor.execute("select * from django_migrations limit 1")
-        except:
-            return
+        except :
+            app.logger.exception()
+
         finally:
             db_conn.putconn(db)
     except:
